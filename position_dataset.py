@@ -5,6 +5,7 @@ from torch.utils.data import IterableDataset
 import torch.nn.functional as F
 import chess.pgn
 import chess
+import torch
 
 
 def position_to_tensor(position: chess.Board):
@@ -50,4 +51,7 @@ class LastMoveDataset(IterableDataset):
         self.position_dataset = PositionDataset(pgn_file)
 
     def __iter__(self):
-        pass
+        for position_dict in iter(self.position_dataset):
+            last_move_dest = position_dict['last_move'].to_square
+            position = position_dict['position']
+            yield (position_to_tensor(position), F.one_hot(torch.tensor(last_move_dest), 64).type(torch.float32))
