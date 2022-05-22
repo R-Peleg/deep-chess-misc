@@ -9,15 +9,18 @@ class LastMovePredictor(pl.LightningModule):
         super().__init__()
         self.predict = nn.Sequential(
             nn.Conv2d(12, 64, 3, padding='same'),
+            nn.ReLU(),
             nn.Conv2d(64, 64, 3, padding='same'),
+            nn.ReLU(),
             nn.Flatten(),
             nn.Linear(64 * 64, 512),
             nn.ReLU(),
             nn.Linear(512, 64),
-            nn.Softmax(0)
+            nn.Softmax(dim=1)
         )
 
     def forward(self, x):
+        x = x.permute((0, 3, 1, 2))
         return self.predict(x)
 
 
