@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import chess.pgn
 import chess
 import torch
+import random
 
 
 def position_to_tensor(position: chess.Board):
@@ -34,10 +35,11 @@ class PositionDataset(IterableDataset):
                 'last_move': move
             }
 
-    def __init__(self, pgn_file, skip_games=0, limit_games=None):
+    def __init__(self, pgn_file, skip_games=0, limit_games=None, take_position_prob=1):
         self.pgn_file = pgn_file
         self.skip_games = skip_games
         self.limit_games = limit_games
+        self.take_position_prob = take_position_prob
 
     def __iter__(self):
         self.pgn_file.seek(0)
@@ -49,14 +51,16 @@ class PositionDataset(IterableDataset):
             if self.limit_games is not None and current_game_idx >= self.limit_games:
                 return
             for position in self._game_to_position_iter(game):
+                if self.take_position_prob < 1 and random.random() > self.take_position_prob:
+                    continue
                 yield position
             game = chess.pgn.read_game(self.pgn_file)
             current_game_idx += 1
 
 
 class LastMoveDataset(IterableDataset):
-    def __init__(self, pgn_file, skip_games=0, limit_games=None):
-        self.position_dataset = PositionDataset(pgn_file, skip_games, limit_games)
+    def __init__(self, pgn_file, skip_games=0, limit_games=None, take_position_prob=1):
+        self.position_dataset = PositionDataset(pgn_file, skip_games, limit_games, take_position_prob)
 
     def __iter__(self):
         for position_dict in iter(self.position_dataset):
