@@ -1,19 +1,31 @@
+import torch
 from torch import nn
+from torch.nn import functional as F
+import pytorch_lightning as pl
 
 
-class LastMovePredictorModel(nn.Module):
+class LastMovePredictor(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.flatten = nn.Flatten()
-        self.hidden = nn.Linear(64 * 12, 128)
-        self.relu = nn.ReLU()
-        self.output = nn.Linear(128, 64)
-        self.sigmoid = nn.Sigmoid()
+        self.predict = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 12, 512),
+            nn.ReLU(),
+            nn.Linear(512, 64),
+            nn.Softmax(0)
+        )
 
     def forward(self, x):
-        x = self.flatten(x)
-        x = self.hidden(x)
-        x = self.relu(x)
-        x = self.output(x)
-        x = self.sigmoid(x)
-        return x
+        return self.predict(x)
+
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
+
+    def training_step(self, train_batch, batch_idx):
+        x, y = train_batch
+        x = x.view(x.size(0), -1)
+        pred = self.predict(x)
+        loss = F.cross_entropy(pred, y)
+        return loss
