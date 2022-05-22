@@ -29,3 +29,11 @@ class LastMovePredictor(pl.LightningModule):
         pred = self.predict(x)
         loss = F.cross_entropy(pred, y)
         return loss
+
+    def validation_step(self, val_batch, batch_idx):
+        x, y = val_batch
+        x = x.view(x.size(0), -1)
+        pred = self.predict(x)
+        loss = F.cross_entropy(pred, y)
+        return loss
+    

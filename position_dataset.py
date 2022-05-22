@@ -34,21 +34,29 @@ class PositionDataset(IterableDataset):
                 'last_move': move
             }
 
-    def __init__(self, pgn_file):
+    def __init__(self, pgn_file, skip_games=0, limit_games=None):
         self.pgn_file = pgn_file
+        self.skip_games = skip_games
+        self.limit_games = limit_games
 
     def __iter__(self):
         self.pgn_file.seek(0)
+        for _ in range(self.skip_games):
+            chess.pgn.skip_game(self.pgn_file)
         game = chess.pgn.read_game(self.pgn_file)
+        current_game_idx = 0
         while game is not None:
+            if self.limit_games is not None and current_game_idx >= self.limit_games:
+                return
             for position in self._game_to_position_iter(game):
                 yield position
             game = chess.pgn.read_game(self.pgn_file)
+            current_game_idx += 1
 
 
 class LastMoveDataset(IterableDataset):
-    def __init__(self, pgn_file):
-        self.position_dataset = PositionDataset(pgn_file)
+    def __init__(self, pgn_file, skip_games=0, limit_games=None):
+        self.position_dataset = PositionDataset(pgn_file, skip_games, limit_games)
 
     def __iter__(self):
         for position_dict in iter(self.position_dataset):
